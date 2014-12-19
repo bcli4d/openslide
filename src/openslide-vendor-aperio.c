@@ -102,6 +102,7 @@ static bool render_missing_tile(struct level *l,
   if (l->prev) {
     // recurse into previous level
     double relative_ds = l->prev->base.downsample / l->base.downsample;
+    printf("OPENSLIDE: APERIO: render_missing_tile(): relative downsample: %lf/ %lf = %lf\n", l->prev->base.downsample, l->base.downsample, relative_ds);
 
     cairo_surface_t *surface =
       cairo_image_surface_create_for_data((unsigned char *) dest,
@@ -109,6 +110,11 @@ static bool render_missing_tile(struct level *l,
                                           tw, th, tw * 4);
     cairo_t *cr = cairo_create(surface);
     cairo_surface_destroy(surface);
+	  // TCP  // use GAUSSIAN as a flag to indicate that we are rendering missing tile.
+      // GAUSSIAN is not implemented.
+	  cairo_pattern_set_filter (cairo_get_source (cr), CAIRO_FILTER_NEAREST);
+
+
     cairo_set_operator(cr, CAIRO_OPERATOR_SATURATE);
     cairo_translate(cr, -1, -1);
     cairo_scale(cr, relative_ds, relative_ds);
@@ -227,6 +233,8 @@ static bool read_tile(openslide_t *osr,
 			 &cache_entry);
   }
 
+  // save the old filter
+  cairo_filter_t f = cairo_pattern_get_filter(cairo_get_source(cr));
   // draw it
   cairo_surface_t *surface = cairo_image_surface_create_for_data((unsigned char *) tiledata,
 								 CAIRO_FORMAT_ARGB32,
@@ -234,7 +242,18 @@ static bool read_tile(openslide_t *osr,
 								 tw * 4);
   cairo_set_source_surface(cr, surface, 0, 0);
   cairo_surface_destroy(surface);
+
+  if (f == CAIRO_FILTER_GAUSSIAN)
+	  cairo_pattern_set_filter (cairo_get_source (cr), CAIRO_FILTER_BILINEAR);
+  else
+	  cairo_pattern_set_filter (cairo_get_source (cr), CAIRO_FILTER_NEAREST);
+
+
   cairo_paint(cr);
+
+  // restore.
+  cairo_pattern_set_filter (cairo_get_source (cr), f);
+
 
   // done with the cache entry, release it
   _openslide_cache_entry_unref(cache_entry);

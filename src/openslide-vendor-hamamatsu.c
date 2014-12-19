@@ -741,6 +741,9 @@ static bool read_jpeg_tile(openslide_t *osr,
 
   cairo_set_source_surface(cr, surface, 0, 0);
   cairo_surface_destroy(surface);
+
+  cairo_pattern_set_filter (cairo_get_source (cr), CAIRO_FILTER_NEAREST);
+
   cairo_paint(cr);
 
   // done with the cache entry, release it
@@ -1691,6 +1694,9 @@ static bool ngr_read_tile(openslide_t *osr,
                                                                  tw * 4);
   cairo_set_source_surface(cr, surface, 0, 0);
   cairo_surface_destroy(surface);
+
+  cairo_pattern_set_filter (cairo_get_source (cr), CAIRO_FILTER_NEAREST);
+
   cairo_paint(cr);
 
   // done with the cache entry, release it

@@ -526,7 +526,15 @@ static bool read_region(openslide_t *osr,
 
   if (success) {
     // commit, nothing went wrong
+	  cairo_filter_t f = cairo_pattern_get_filter(cairo_get_source(cr));
+	  if (f == CAIRO_FILTER_GAUSSIAN)
+		  cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_BILINEAR);
+	  else
+		  cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_NEAREST);
+
     cairo_paint(cr);
+	  cairo_pattern_set_filter(cairo_get_source(cr), f);
+
   }
 
   // restore old source
@@ -600,6 +608,9 @@ void openslide_read_region(openslide_t *osr,
       // create the cairo context
       cairo_t *cr = cairo_create(surface);
       cairo_surface_destroy(surface);
+	  // TCP
+	  cairo_pattern_set_filter (cairo_get_source (cr), CAIRO_FILTER_NEAREST);
+
 
       // paint
       if (!read_region(osr, cr, sx, sy, level, sw, sh, &tmp_err)) {
