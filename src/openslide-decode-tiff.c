@@ -49,6 +49,7 @@ struct tiff_file_handle {
   struct _openslide_tiffcache *tc;
   int64_t offset;
   int64_t size;
+  FILE *handle;
 };
 
 struct associated_image {
@@ -352,7 +353,11 @@ static tsize_t tiff_do_read(thandle_t th, tdata_t buf, tsize_t size) {
 
   // don't leave the file handle open between calls
   // also ensures FD_CLOEXEC is set
-  FILE *f = _openslide_fopen(hdl->tc->filename, "rb", NULL);
+  //FILE *f = _openslide_fopen(hdl->tc->filename, "rb", NULL);
+
+  //Left the file open on tiff_open
+  FILE *f = hdl->handle;
+  
   if (f == NULL) {
     return 0;
   }
@@ -362,7 +367,7 @@ static tsize_t tiff_do_read(thandle_t th, tdata_t buf, tsize_t size) {
   }
   int64_t rsize = fread(buf, 1, size, f);
   hdl->offset += rsize;
-  fclose(f);
+  //fclose(f);
   return rsize;
 }
 
@@ -395,6 +400,9 @@ static toff_t tiff_do_seek(thandle_t th, toff_t offset, int whence) {
 static int tiff_do_close(thandle_t th) {
   struct tiff_file_handle *hdl = th;
 
+  FILE *f = hdl->handle;
+  fclose(f);
+  
   g_slice_free(struct tiff_file_handle, hdl);
   return 0;
 }
@@ -435,7 +443,8 @@ static TIFF *tiff_open(struct _openslide_tiffcache *tc, GError **err) {
     fclose(f);
     return NULL;
   }
-  fclose(f);
+  //Leave the file open
+  //fclose(f);
 
   // check magic
   // TODO: remove if libtiff gets private error/warning callbacks
@@ -468,6 +477,7 @@ static TIFF *tiff_open(struct _openslide_tiffcache *tc, GError **err) {
   struct tiff_file_handle *hdl = g_slice_new0(struct tiff_file_handle);
   hdl->tc = tc;
   hdl->size = size;
+  hdl->handle = f;
 
   // TIFFOpen
   // mode: m disables mmap to avoid sigbus and other mmap fragility
